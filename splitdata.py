@@ -71,7 +71,7 @@ for label in labels:
                     outfile = os.path.join(outdir_train, f)
                     os.symlink(os.path.realpath(infile), outfile)
                     print(os.path.realpath(infile), outfile)
-                if spk in test_spk:
+                elif spk in test_spk:
                     outfile = os.path.join(outdir_test, f)
 
                     os.symlink(os.path.realpath(infile), outfile)
