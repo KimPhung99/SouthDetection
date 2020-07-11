@@ -2,6 +2,7 @@ from imutils import paths
 from scipy.io import wavfile
 import os
 import librosa
+import librosa.display
 import numpy as np
 from tqdm import tqdm
 from sklearn.preprocessing import LabelBinarizer
@@ -15,6 +16,7 @@ from keras.optimizers import SGD, Adadelta
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from keras.models import load_model
+import cv2
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 assert len(physical_devices) > 0, "Not enough GPU hardware devices available"
@@ -30,30 +32,36 @@ pathtest = "data/testing"
 datatrain = []
 labeltrain = []
 datatesting = []
+
 labeltesting = []
 
 soundPaths = list(paths.list_files(pathtrain))
 print("len file sound train: {}".format(len(soundPaths)))
 lenS = len(soundPaths)
 print("Read file training...")
-stop = 0
+
 for soundPath in tqdm(soundPaths):
-    stop += 1
     label = soundPath.split(os.path.sep)[-2]
 
+#rate: slg diem moi s thu dc
     rate, data = wavfile.read("{}".format(soundPath))
     data = np.array(data, dtype=np.float32)
-    nfft = int(rate * 0.05)
-    hopl = nfft // 2
+    nfft = int(rate * 0.05) #ao ra cua so 50mS
+    hopl = nfft // 2    #truot 0.25mS
     # data *= 1. / 32768
+    # cu 50mS xem tan so xhien bn lan, cu 40 lan 1, sd fast fuire transform chuyen du lieu roi rac tu time sang tso (dc bieu dien duoi dang anh)
     feature = librosa.feature.mfcc(y=data, sr=rate, n_mfcc=40, fmin=0, fmax=8000, n_fft=nfft, hop_length=hopl,
-                                   power=2.0)
+                                   power=2.0) # binh phuong data cho de nhan dang
+    # plt.figure(figsize=(10, 4))
+    # librosa.display.specshow(feature, x_axis='time')
+    # plt.colorbar()
+    # plt.title('MFCC')
+    # plt.tight_layout()
+    # plt.show()
     feature = np.expand_dims(feature, axis=2)
 
     datatrain.append(feature)
     labeltrain.append(label)
-
-
 
 datatrain = np.array(datatrain, dtype="float32")
 labeltrain = np.array(labeltrain)
@@ -61,9 +69,7 @@ labeltrain = np.array(labeltrain)
 soundPaths = list(paths.list_files(pathtest))
 print("\nlen file sound test: {}".format(len(soundPaths)))
 print("Read file testing...")
-stop = 0
 for soundPath in tqdm(soundPaths):
-    stop += 1
     label = soundPath.split(os.path.sep)[-2]
 
     rate, data = wavfile.read("{}".format(soundPath))
@@ -72,7 +78,7 @@ for soundPath in tqdm(soundPaths):
     hopl = nfft // 2
     # data *= 1. / 32768
     feature = librosa.feature.mfcc(y=data, sr=rate, n_mfcc=40, fmin=0, fmax=8000, n_fft=nfft, hop_length=hopl, power=2.0)
-    feature = np.expand_dims(feature, axis=2)
+    feature = np.expand_dims(feature, axis=2) # tao the 1 chieu nua
     datatesting.append(feature)
     labeltesting.append(label)
 
@@ -111,6 +117,7 @@ model.add(Dense(units=clasf, activation='softmax'))
 
 print(model.summary())
 
+
 opt = SGD(learning_rate=learning_rate)
 model.compile(optimizer=opt, loss='categorical_crossentropy', metrics=['accuracy'])
 
@@ -119,7 +126,8 @@ history = model.fit(datatrain, labeltrain, epochs=epochs, validation_data=(datat
 print("Saving model....")
 model.save("phungmodel.h5")
 print("Model saved!")
-
+# acc ty le giu so diem du doan dung / tong so diem trong tap data
+# loss du doan ko dung/tong
 fig = plt.figure()
 plt.plot(history.history['accuracy'])
 plt.plot(history.history['val_accuracy'])
